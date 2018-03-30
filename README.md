@@ -1,6 +1,6 @@
 # genetics
 
-A work in progress. An educational attempt at modeling mendelian modes on inheritance.
+An educational attempt at modeling mendelian modes on inheritance.
 
 written in pure python.
 
