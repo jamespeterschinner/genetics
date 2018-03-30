@@ -20,7 +20,7 @@ M = affected male;
 | = child of
 
 The project aims to generate answers to statistical questions such as:
-  what is the first generation female's possible genotypes given a mode of inheritence?
+  what are the first generation possible genotypes given a mode of inheritence?
   
 ```
 >>> p = Pedigree.from_file(r'C:\Users\James\PycharmProjects\genetics\family_tree.txt')
