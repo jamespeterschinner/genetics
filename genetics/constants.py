@@ -1,5 +1,3 @@
-from genotype import Genotype
-
 FEMALES = {'f', 'F'}
 MALES = {'m', 'M'}
 VALID_OBSERVATIONS = set.union(FEMALES, MALES)
@@ -11,9 +9,9 @@ AUTOSOMAL_RECESSIVE = 'AUTOSOMAL_RECESSIVE'
 X_LINKED_DOMINANT = 'X_LINKED_DOMINANT'
 X_LINKED_RECESSIVE = 'X_LINKED_RECESSIVE'
 Y_LINKED = 'Y_LINKED'
-AUTOSOMAL_CHROMOSOMES = {Genotype(i) for i in ['aa', 'AA', 'aA', 'Aa']}
-FEMALE_SEX_LINKED_CHROMOSOMES = {Genotype(i) for i in ['xx', 'XX', 'xX', 'Xx']}
-MALE_SEX_LINKED_CHROMOSOMES = {Genotype(i) for i in ['xy', 'XY', 'xY', 'Xy']}
+AUTOSOMAL_CHROMOSOMES = {'aa', 'AA', 'aA', 'Aa'}
+FEMALE_SEX_LINKED_CHROMOSOMES = {'xx', 'XX', 'xX', 'Xx'}
+MALE_SEX_LINKED_CHROMOSOMES = {'xy', 'XY', 'xY', 'Xy'}
 
 ALL_MODES = (AUTOSOMAL_DOMINANT, AUTOSOMAL_RECESSIVE,
              X_LINKED_DOMINANT, X_LINKED_RECESSIVE,
