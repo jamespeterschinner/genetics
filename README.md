@@ -1,6 +1,6 @@
 # genetics
 
-An educational attempt at modeling mendelian modes on inheritance.
+An educational attempt at modeling mendelian modes of inheritance.
 
 written in pure python.
 
