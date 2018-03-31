@@ -46,6 +46,16 @@ class Observation(str):
         if father is not None:
             father.add_children(self)
 
+    ### PARENT ###
+    @property
+    def parent(self):
+        result = None
+        if self.mother:
+            result = self.mother
+        elif self.father:
+            result = self.mother
+        return result
+
     ### CHILDREN ###
     @property
     def children(self):
