@@ -12,12 +12,15 @@ m-f
     |       |
     m m m f M
 ```
-f = unaffected female;
-F = affected female;
-m = unaffected male;
-M = affected male;
-\- = partner;
+---
+```
+f = unaffected female
+F = affected female
+m = unaffected male
+M = affected male
+- = partner
 | = child of
+```
 
 The project aims to generate answers to statistical questions such as:
   what are the first generation possible genotypes given a mode of inheritence?
