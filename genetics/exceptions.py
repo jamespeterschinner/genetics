@@ -3,3 +3,6 @@ class InvalidObservation(Exception):
 
 class InvalidChild(Exception):
     pass
+
+class InvalidState(Exception):
+    pass

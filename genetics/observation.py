@@ -69,7 +69,7 @@ class Observation(str):
             children = self.mother.children
         elif self.father:
             children = self.father.children
-        return tuple(i for i in children if i is not self)
+        return children
 
     ### ROOT ###
     @property

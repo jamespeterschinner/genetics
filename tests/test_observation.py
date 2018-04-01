@@ -1,7 +1,7 @@
 import pytest
 
 from exceptions import InvalidObservation
-from genetics.pedigree import Observation
+from observation import Observation
 
 
 def test_observation_raises_error_with_invalid_input():

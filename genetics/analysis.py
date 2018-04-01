@@ -1,10 +1,12 @@
-from collections import Counter, defaultdict
+from collections import defaultdict
 from fractions import Fraction
 from functools import reduce
-from itertools import product, chain
-from operator import mul, itemgetter
+from itertools import product
+from operator import mul
 
 from constants import *
+from exceptions import InvalidState
+from punnet_square import punnet_square
 
 
 def affected_genotype(genotype, mode):
@@ -84,6 +86,8 @@ def phenotype_given_genotype(genotype, mode):
 def genotype_possibilities(mode, gender, affected=None, observation=None):
     """Return valid genotypes for a given observation and mode
 
+    This is equivalent to a null prior.
+
     Args:
         mode: The mode of inheritance
         gender: Optionally supply the gender
@@ -91,6 +95,10 @@ def genotype_possibilities(mode, gender, affected=None, observation=None):
 
     Returns: list of valid genotypes
     """
+
+    if mode == Y_LINKED and gender == FEMALE and affected == True:
+        raise InvalidState('Can not have an affected female if condition is Y_LINKED')
+
     if observation is not None:
         affected = observation.affected
 
@@ -106,22 +114,9 @@ def genotype_possibilities(mode, gender, affected=None, observation=None):
         chromosomes = {genotype for genotype in chromosomes if
                        affected_genotype(genotype, mode) == affected}
 
-    return chromosomes
+    prior = Fraction(1, len(chromosomes))
 
-
-def parent_combinations(mother_genotypes, father_genotypes):
-    """Return the parent combinations for two lists of parents
-    """
-    return list(product(mother_genotypes, father_genotypes))
-
-
-def punnet_square(mother_genotypes, father_genotypes):
-    """Combine two possible parent genotypes.
-    Equivalent to a punnet square
-    """
-    return list(chain.from_iterable(list(''.join(genotype) for genotype in product(mother, father))
-                                    for mother, father in
-                                    parent_combinations(mother_genotypes, father_genotypes)))
+    return {chromosome: prior for chromosome in chromosomes}
 
 
 def normalize_probabilities(probabilities):
@@ -134,140 +129,160 @@ def normalize_probabilities(probabilities):
             if value != 0}
 
 
-def constrain_punnet(mode, observation, punnet):
+def constrain_probabilities(mode, observation, probabilities):
     """Given a punnet square remove all genotypes that
     don't match the observation given a mode of inheritance
     """
-    if isinstance(punnet, list):
-        return [genotype for genotype in punnet if
-                observation in phenotype_given_genotype(genotype, mode)]
-    elif isinstance(punnet, dict):
-        return normalize_probabilities({genotype: probability for genotype, probability in punnet.items()
-                                        if observation in phenotype_given_genotype(genotype, mode)})
+    constrained = {genotype: probability for genotype, probability in probabilities.items()
+                   if observation in phenotype_given_genotype(genotype, mode)}
+    if constrained:
+        constrained = normalize_probabilities(constrained)
+    return constrained
 
 
-def punnet_occurrences(mode, observation, punnet):
+def punnet_occurrences(mode, observation, probabilities):
     """Calculate the times the observation would have been made given a punnet square
     """
-    try:
-        return Fraction(len(constrain_punnet(mode, observation, punnet)), len(punnet))
-    except ZeroDivisionError:
-        return 0
+    return sum(probability for genotype, probability in probabilities.items()
+               if observation in phenotype_given_genotype(genotype, mode))
 
 
-def next_punnet(mode, observation, punnet):
-    """Combine a punnet square with an observation
-
-    The idea is to constrain the supplied punnet with the observation
-    and return a new punnet square with the possible partner genotypes
-
-    Args:
-        mode: Mode of inheritance
-        observation: The observation to constrain the supplied punnet
-        punnet: A list of possible genotypes
-
-    Returns: list of possible genotypes
-    """
-    mother, father = observation.mother_father
-
-    if mother is observation:
-        mother_genotypes = constrain_punnet(mode, mother, punnet)
-    elif father is observation:
-        father_genotypes = constrain_punnet(mode, father, punnet)
-
-    if mother is None:
-        mother_genotypes = genotype_possibilities(mode, FEMALE)
-    elif father is None:
-        father_genotypes = genotype_possibilities(mode, MALE)
-    elif mother is not observation:
-        mother_genotypes = genotype_possibilities(mode, FEMALE, mother.affected)
-    elif father is not observation:
-        father_genotypes = genotype_possibilities(mode, MALE, father.affected)
-
-    return punnet_square(mother_genotypes, father_genotypes)
+def next_parent_probabilities(mode, child, genotype_probabilities):
+    """Create the next mother and father genotypes for the parent probabilities
+    function"""
+    mother, father = child.mother_father
+    constrained_probabilities = constrain_probabilities(mode, child, genotype_probabilities)
+    mother_genotypes = father_genotypes = None
+    if mother is child:
+        mother_genotypes = constrained_probabilities
+        father_genotypes = genotype_possibilities(mode, MALE, observation=father)
+    if father is child:
+        father_genotypes = constrained_probabilities
+        mother_genotypes = genotype_possibilities(mode, FEMALE, observation=mother)
+    return mother_genotypes, father_genotypes
 
 
-def children_probability(mode, observation, punnet):
-    """Calculate the probability the supplied punnet
-     generating the supplied observations children observations
-     for a given mode of inheritance
+def parent_likelihood_n_children(mode, children, mother_genotypes, father_genotypes):
+    """Return a probability that reflects how well the mother and father genotypes
+    explain the observed children.
 
-    Args:
-        mode: Mode of inheritance
-        observation: The observation to calculate the children probability for
-        punnet: The punnet square.
-
-    Returns: Fraction indicating probability
-    """
-    probabilities = []
-    for child in observation.children:
-        probabilities.append(
-            punnet_occurrences(mode, child, punnet)
-        )
-        probabilities.append(
-            children_probability(mode, child, next_punnet(mode, child, punnet))
-        )
-
-    return reduce(mul, probabilities, 1)
-
-
-def parent_genotypes_n_children_observations(mode, observation):
-    """Calculate the probability for each parent genotype
-    combination from the observations children
+    mother and father genotypes are dicts of genotype probabilities. This is because
+    we can iterate through each individual parent genotype at the top level, but any
+    children will have a range of probabilities that needs to be allowed for with the
+    recursive call to self
 
     Args:
         mode: The mode of inheritance
-        observation: The observations to constrain.
-    """
+        observation: The observation to start from
+        mother_genotypes: The probabilities of mother genotypes
+        father_genotypes: the probabilities of father genotypes
 
-    mother, father = observation.mother_father
-    mother_genotypes = genotype_possibilities(mode, FEMALE, observation=mother)
-    father_genotypes = genotype_possibilities(mode, MALE, observation=father)
-    parent_genotype_probabilities = {}
-    for mother_genotype, father_genotype in product(mother_genotypes, father_genotypes):
-        parent_genotype_probabilities.update(
-            {(mother_genotype, father_genotype):
-                 children_probability(mode, observation, punnet_square(mother_genotype, father_genotype))}
+    """
+    genotypes_probabilities = punnet_square(mother_genotypes, father_genotypes)
+    result = [1]
+    for child in children:
+        result.append(punnet_occurrences(mode, child, genotypes_probabilities))
+        result.append(
+            parent_likelihood_n_children(mode, child.children,
+                                         *next_parent_probabilities(mode, child, genotypes_probabilities))
         )
-    return normalize_probabilities(parent_genotype_probabilities)
+    return reduce(mul, result)
 
 
-def children_genotypes_n_parent_genotypes(parent_probabilities):
-    """Determine the probabilities for every possible child genotype
-    given a set of parent genotype probabilities
-    """
-    parent_children_occurrences = {parents: Counter(punnet_square(*parents))
-                                   for parents in parent_probabilities}
-    children_probabilities = defaultdict(lambda: 0)
-    for parents, children in parent_children_occurrences.items():
-        parent_probability = parent_probabilities[parents]
-        for child, count in children.items():
-            children_probabilities[child] += parent_probability * count
-
-    return normalize_probabilities(children_probabilities)
+def parent_probabilities_n_children(mode, children, mother_genotypes, father_genotypes):
+    return normalize_probabilities({
+        (m_genotype, f_genotype):
+            parent_likelihood_n_children(mode, children, m_genotype, f_genotype) * (f_prob * m_prob)
+        for (m_genotype, m_prob), (f_genotype, f_prob) in
+        product(mother_genotypes.items(), father_genotypes.items())
+    })
 
 
-def observation_genotypes_n_parent_observations(mode, observation):
+def parent_to_children_probabilities(parent_probabilities):
+    child_probabilities = defaultdict(lambda: 0)
+    for (f_genotype, m_genotype), parent_probability in parent_probabilities.items():
+        for child, child_probability in punnet_square(f_genotype, m_genotype).items():
+            child_probabilities[child] += child_probability * parent_probability
 
-    observation_n_parent_possibilities = constrain_punnet(
+    return normalize_probabilities(child_probabilities)
+
+
+def parent_probabilities(mode, observation):
+    mother, father = observation.mother, observation.father
+    if mother is None:
+        mother_genotypes = genotype_possibilities(mode, FEMALE)
+    else:
+        mother_genotypes, father_genotypes = parent_probabilities(mode, mother)
+    if father is None:
+        father_genotypes = genotype_possibilities(mode, MALE)
+    else:
+        mother_genotypes, father_genotypes = parent_probabilities(mode, father)
+
+    observation_probabilities = constrain_probabilities(
+        # Constrain the children possibilities to genotypes that could
+        # have resulted in the observation
         mode=mode,
         observation=observation,
-        punnet=children_genotypes_n_parent_genotypes(
-            parent_genotypes_n_children_observations(mode, observation.parent)
+        probabilities=parent_to_children_probabilities(
+            # Given the probabilities of the parent combinations
+            # Calculate the probability of each potential child
+            parent_probabilities=parent_probabilities_n_children(
+                # Find out how well each parent combination matches the
+                # children of the observation
+                mode=mode,
+                children=observation.siblings,
+                mother_genotypes=mother_genotypes,
+                father_genotypes=father_genotypes
+            )
         )
     )
 
-    parent_n_children_probabilities = parent_genotypes_n_children_observations(
+    if observation.gender == FEMALE:
+        mother_genotypes = observation_probabilities
+    else:
+        father_genotypes = observation_probabilities
+
+    return mother_genotypes, father_genotypes
+
+
+def observation_probabilities_n_parents(mode, observation):
+    if observation.parent is None:
+        return constrain_probabilities(mode, observation,
+                                        genotype_possibilities(mode, observation.gender,
+                                                               observation=observation))
+
+    observation_probabilities = constrain_probabilities(
+        # Constrain the children possibilities to genotypes that could
+        # have resulted in the observation
         mode=mode,
-        observation=observation
+        observation=observation,
+        probabilities=parent_to_children_probabilities(
+            # Given the probabilities of the parent combinations
+            # Calculate the probability of each potential child
+            parent_probabilities=parent_probabilities_n_children(
+                # Find out how well each parent combination matches the
+                # children of the observation
+                mode,
+                observation.siblings,
+                *parent_probabilities(mode, observation)
+            )
+        )
     )
 
-    result = defaultdict(lambda: 0)
-    parent_fn = itemgetter({FEMALE: 0, MALE: 1}[observation.gender])
-    for parents, probability in parent_n_children_probabilities.items():
-        try:
-            result[parents] += observation_n_parent_possibilities[parent_fn(parents)] * probability
-        except KeyError:
-            pass
+    return observation_probabilities
 
-    return normalize_probabilities(result)
+def observation_probabilities(mode, observation):
+    if not observation.children:
+        return observation_probabilities_n_parents(mode, observation)
+    mother, father = observation.mother_father
+    if mother:
+        mother_probabilities = observation_probabilities_n_parents(mode, mother)
+    else:
+        mother_probabilities = genotype_possibilities(mode, FEMALE)
+
+    if father:
+        father_probabilities = observation_probabilities_n_parents(mode, father)
+    else:
+        father_probabilities = genotype_possibilities(mode, MALE)
+
+    return parent_probabilities_n_children(mode, observation.siblings, mother_probabilities, father_probabilities)
