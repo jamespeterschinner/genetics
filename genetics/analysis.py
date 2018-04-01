@@ -189,10 +189,10 @@ def parent_likelihood_n_children(mode, children, mother_genotypes, father_genoty
     return reduce(mul, result)
 
 
-def parent_probabilities_n_children(mode, children, mother_genotypes, father_genotypes):
+def parent_probabilities_n_children(mode, observation, mother_genotypes, father_genotypes):
     return normalize_probabilities({
         (m_genotype, f_genotype):
-            parent_likelihood_n_children(mode, children, m_genotype, f_genotype) * (f_prob * m_prob)
+            parent_likelihood_n_children(mode, observation, m_genotype, f_genotype) * (f_prob * m_prob)
         for (m_genotype, m_prob), (f_genotype, f_prob) in
         product(mother_genotypes.items(), father_genotypes.items())
     })
@@ -230,7 +230,7 @@ def parent_probabilities(mode, observation):
                 # Find out how well each parent combination matches the
                 # children of the observation
                 mode=mode,
-                children=observation.siblings,
+                observation=observation.siblings,
                 mother_genotypes=mother_genotypes,
                 father_genotypes=father_genotypes
             )
@@ -245,44 +245,8 @@ def parent_probabilities(mode, observation):
     return mother_genotypes, father_genotypes
 
 
-def observation_probabilities_n_parents(mode, observation):
-    if observation.parent is None:
-        return constrain_probabilities(mode, observation,
-                                        genotype_possibilities(mode, observation.gender,
-                                                               observation=observation))
-
-    observation_probabilities = constrain_probabilities(
-        # Constrain the children possibilities to genotypes that could
-        # have resulted in the observation
-        mode=mode,
-        observation=observation,
-        probabilities=parent_to_children_probabilities(
-            # Given the probabilities of the parent combinations
-            # Calculate the probability of each potential child
-            parent_probabilities=parent_probabilities_n_children(
-                # Find out how well each parent combination matches the
-                # children of the observation
-                mode,
-                observation.siblings,
-                *parent_probabilities(mode, observation)
-            )
-        )
-    )
-
-    return observation_probabilities
-
 def observation_probabilities(mode, observation):
-    if not observation.children:
-        return observation_probabilities_n_parents(mode, observation)
-    mother, father = observation.mother_father
-    if mother:
-        mother_probabilities = observation_probabilities_n_parents(mode, mother)
-    else:
-        mother_probabilities = genotype_possibilities(mode, FEMALE)
+    return parent_probabilities_n_children(mode, observation.children,
+                                    *parent_probabilities(mode, observation))
 
-    if father:
-        father_probabilities = observation_probabilities_n_parents(mode, father)
-    else:
-        father_probabilities = genotype_possibilities(mode, MALE)
 
-    return parent_probabilities_n_children(mode, observation.siblings, mother_probabilities, father_probabilities)

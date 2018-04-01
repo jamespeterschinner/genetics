@@ -64,7 +64,7 @@ class Observation(str):
     ### SIBLINGS ###
     @property
     def siblings(self):
-        children = ()
+        children = (self,)
         if self.mother:
             children = self.mother.children
         elif self.father:
