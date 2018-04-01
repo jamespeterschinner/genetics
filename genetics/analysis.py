@@ -189,10 +189,10 @@ def parent_likelihood_n_children(mode, children, mother_genotypes, father_genoty
     return reduce(mul, result)
 
 
-def parent_probabilities_n_children(mode, observation, mother_genotypes, father_genotypes):
+def parent_probabilities_n_children(mode, children, mother_genotypes, father_genotypes):
     return normalize_probabilities({
         (m_genotype, f_genotype):
-            parent_likelihood_n_children(mode, observation, m_genotype, f_genotype) * (f_prob * m_prob)
+            parent_likelihood_n_children(mode, children, m_genotype, f_genotype) * (f_prob * m_prob)
         for (m_genotype, m_prob), (f_genotype, f_prob) in
         product(mother_genotypes.items(), father_genotypes.items())
     })

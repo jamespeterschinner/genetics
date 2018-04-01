@@ -22,8 +22,8 @@ M = affected male
 | = child of
 ```
 
-The project aims to generate answers to statistical questions such as:
-  what are the first generation possible genotypes given a mode of inheritence?
+The project aims to generate answers to statistical questions. Current functionality
+is limited. See below for example.
   
 ```
 >>> p = Pedigree.from_file(r'C:\Users\James\PycharmProjects\genetics\family_tree.txt')
