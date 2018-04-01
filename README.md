@@ -6,11 +6,11 @@ written in pure python.
 
 Pedigrees are input via ASCII art. Eg.
 ```
-f-M
-|
-m f-m f-M
-  |   |
-  f   f m M f
+m-f
+  |
+  m f-m m   f-m
+    |       |
+    m m m f M
 ```
 f = unaffected female;
 F = affected female;
