@@ -199,6 +199,9 @@ def parent_probabilities_n_children(mode, observation, mother_genotypes, father_
 
 
 def parent_to_children_probabilities(parent_probabilities):
+    """Convert the probabilities of parent combinations to there resulting
+    children probabilities
+    """
     child_probabilities = defaultdict(lambda: 0)
     for (f_genotype, m_genotype), parent_probability in parent_probabilities.items():
         for child, child_probability in punnet_square(f_genotype, m_genotype).items():
@@ -208,6 +211,8 @@ def parent_to_children_probabilities(parent_probabilities):
 
 
 def parent_probabilities(mode, observation):
+    """Calculate the parent genotype probabilities for the given observation
+    """
     mother, father = observation.mother, observation.father
     if mother is None:
         mother_genotypes = genotype_possibilities(mode, FEMALE)
@@ -218,24 +223,12 @@ def parent_probabilities(mode, observation):
     else:
         mother_genotypes, father_genotypes = parent_probabilities(mode, father)
 
-    observation_probabilities = constrain_probabilities(
-        # Constrain the children possibilities to genotypes that could
-        # have resulted in the observation
-        mode=mode,
-        observation=observation,
-        probabilities=parent_to_children_probabilities(
-            # Given the probabilities of the parent combinations
-            # Calculate the probability of each potential child
-            parent_probabilities=parent_probabilities_n_children(
-                # Find out how well each parent combination matches the
-                # children of the observation
-                mode=mode,
-                observation=observation.siblings,
-                mother_genotypes=mother_genotypes,
-                father_genotypes=father_genotypes
-            )
-        )
-    )
+    # Find out how well each parent combination matches the parents children
+    a = parent_probabilities_n_children(mode, observation.siblings, mother_genotypes, father_genotypes)
+    # Convert the parent probabilities to children probabilities
+    b = parent_to_children_probabilities(a)
+    # Constrain the children possibilities to genotypes that could have resulted in the observation
+    observation_probabilities = constrain_probabilities(mode, observation, b)
 
     if observation.gender == FEMALE:
         mother_genotypes = observation_probabilities
@@ -244,9 +237,23 @@ def parent_probabilities(mode, observation):
 
     return mother_genotypes, father_genotypes
 
+def split_parent_probabilities(probabilities):
+    mother = defaultdict(lambda: 0)
+    father = defaultdict(lambda: 0)
+    for (m_genotype, f_genotype), probability in probabilities.items():
+        mother[m_genotype] += probability
+        father[f_genotype] += probability
+    return dict(mother), dict(father)
 
 def observation_probabilities(mode, observation):
-    return parent_probabilities_n_children(mode, observation.children,
-                                    *parent_probabilities(mode, observation))
-
+    if not observation.children:
+        a = parent_probabilities(mode, observation.parent)
+        b = parent_probabilities_n_children(mode, observation.siblings, *a)
+        c = parent_to_children_probabilities(b)
+        return constrain_probabilities(mode, observation, c)
+    else:
+        a = parent_probabilities(mode, observation)
+        b = parent_probabilities_n_children(mode, observation.children, *a)
+        c = split_parent_probabilities(b)
+        return {FEMALE: c[0], MALE: c[1]}[observation.gender]
 
