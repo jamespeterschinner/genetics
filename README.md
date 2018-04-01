@@ -26,20 +26,18 @@ The project aims to generate answers to statistical questions such as:
 >>> p = Pedigree.from_file(r'C:\Users\James\PycharmProjects\genetics\family_tree.txt')
 >>> p
                             
-  0| |1| |2| |3| |4| |5| |6|
-0|f - M                    
- ||                        
-1|m   f - m   f - M        
- |    |       |            
-2|    f       f   m   M   f
->>> from pprint import pprint
->>> answer = genotypes_given_children(X_LINKED_RECESSIVE, p[0,0])
->>> pprint(answer)
-{('XX', 'xY'): Fraction(2, 5),
- ('XX', 'xy'): Fraction(2, 5),
- ('Xx', 'xY'): Fraction(1, 20),
- ('Xx', 'xy'): Fraction(1, 20),
- ('xX', 'xY'): Fraction(1, 20),
- ('xX', 'xy'): Fraction(1, 20)}
+  0| |1| |2| |3| |4| |5| |6| |7|
+0|m - f                        
+ |    |                        
+1|    m   f - m   m       f - m
+ |        |               |    
+2|        m   m   m   f   M    
+
+>>> observation_probabilities(X_LINKED_RECESSIVE, p[2,5])
+{'xX': Fraction(1, 18), 'XX': Fraction(17, 18)}
+>>> observation_probabilities(X_LINKED_RECESSIVE, p[1,6])
+{'xX': Fraction(1, 1)}
+>>> observation_probabilities(X_LINKED_RECESSIVE, p[1,2])
+{'xX': Fraction(1, 9), 'XX': Fraction(8, 9)}
  ```
   
