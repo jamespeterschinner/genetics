@@ -219,45 +219,39 @@ def split_parent_probabilities(probabilities):
     return dict(mother), dict(father)
 
 
-def propagate_probabilities(mode, observation, mother_genotypes, father_genotypes):
+def back_propagate(mode, observation, mother_genotypes, father_genotypes):
     a = parent_probabilities_n_children(mode, observation.siblings, mother_genotypes, father_genotypes)
     b = parent_to_children_probabilities(a)
-    observation_probabilities = constrain_probabilities(mode, observation, b)
-    if observation.gender == FEMALE:
-        mother_genotypes = observation_probabilities
-    else:
-        father_genotypes = observation_probabilities
-
-    return mother_genotypes, father_genotypes
+    return constrain_probabilities(mode, observation, b)
 
 
-def parent_probabilities(mode, observation):
-    """Calculate the parent genotype probabilities for the given observation
-    """
+def parent_probabilities(mode, mother, father):
+    mm = mf = fm = ff = None
 
-    mother, father = observation.mother, observation.father
-    if mother is None and father is None:
-        mother, father = observation.mother_father
-        mother_genotypes = genotype_possibilities(mode, FEMALE, observation=mother)
-        father_genotypes = genotype_possibilities(mode, MALE, observation=father)
-        return split_parent_probabilities(
-            parent_probabilities_n_children(mode, observation.children, mother_genotypes, father_genotypes)
-        )
     if mother:
-        return propagate_probabilities(mode, observation, *parent_probabilities(mode, mother))
+        mm = mother.mother
+        mf = mother.father
     if father:
-        return propagate_probabilities(mode, observation, *parent_probabilities(mode, father))
+        fm = father.mother
+        ff = father.father
+
+    mother_genotypes, father_genotypes = genotype_possibilities(mode, FEMALE, observation=mother), \
+                                         genotype_possibilities(mode, MALE, observation=father)
+
+    # This is how we account for missing parents.
+    if mother is None and father is None:
+        return mother_genotypes, father_genotypes
+    elif mother is None:
+        return mother_genotypes, back_propagate(mode, father, *parent_probabilities(mode, fm, ff))
+    elif father is None:
+        return back_propagate(mode, mother, *parent_probabilities(mode, mm, mf)), father_genotypes
+    else:
+        return back_propagate(mode, mother, *parent_probabilities(mode, mm, mf)), \
+               back_propagate(mode, father, *parent_probabilities(mode, fm, ff))
 
 
 def observation_probabilities(mode, observation):
-    probabilities = parent_probabilities(mode, observation)
-
-    # Parent probabilities function only applies parent_probabilities_n_children func
-    # to the supplied observation parents. This means we need to update the probabilities
-    # for an observation with children
-    if observation.children:
-        probabilities = split_parent_probabilities(
-            parent_probabilities_n_children(mode, observation.children, *probabilities)
-        )
-
+    a = parent_probabilities(mode, *observation.mother_father)
+    b = parent_probabilities_n_children(mode, observation.children, *a)
+    probabilities = split_parent_probabilities(b)
     return {FEMALE: probabilities[0], MALE: probabilities[1]}[observation.gender]

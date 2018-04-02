@@ -1,5 +1,5 @@
-f
+f-m
 |
-m f-m m   f-m
-  |       |
-  m m m f M
+m f-m m      f-m
+  |          |
+  m m m f    M
