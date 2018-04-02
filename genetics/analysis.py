@@ -210,33 +210,6 @@ def parent_to_children_probabilities(parent_probabilities):
     return normalize_probabilities(child_probabilities)
 
 
-def parent_probabilities(mode, observation):
-    """Calculate the parent genotype probabilities for the given observation
-    """
-    mother, father = observation.mother, observation.father
-    if mother is None:
-        mother_genotypes = genotype_possibilities(mode, FEMALE)
-    else:
-        mother_genotypes, father_genotypes = parent_probabilities(mode, mother)
-    if father is None:
-        father_genotypes = genotype_possibilities(mode, MALE)
-    else:
-        mother_genotypes, father_genotypes = parent_probabilities(mode, father)
-
-    # Find out how well each parent combination matches the parents children
-    a = parent_probabilities_n_children(mode, observation.siblings, mother_genotypes, father_genotypes)
-    # Convert the parent probabilities to children probabilities
-    b = parent_to_children_probabilities(a)
-    # Constrain the children possibilities to genotypes that could have resulted in the observation
-    observation_probabilities = constrain_probabilities(mode, observation, b)
-
-    if observation.gender == FEMALE:
-        mother_genotypes = observation_probabilities
-    else:
-        father_genotypes = observation_probabilities
-
-    return mother_genotypes, father_genotypes
-
 def split_parent_probabilities(probabilities):
     mother = defaultdict(lambda: 0)
     father = defaultdict(lambda: 0)
@@ -245,15 +218,46 @@ def split_parent_probabilities(probabilities):
         father[f_genotype] += probability
     return dict(mother), dict(father)
 
-def observation_probabilities(mode, observation):
-    if not observation.children:
-        a = parent_probabilities(mode, observation.parent)
-        b = parent_probabilities_n_children(mode, observation.siblings, *a)
-        c = parent_to_children_probabilities(b)
-        return constrain_probabilities(mode, observation, c)
-    else:
-        a = parent_probabilities(mode, observation)
-        b = parent_probabilities_n_children(mode, observation.children, *a)
-        c = split_parent_probabilities(b)
-        return {FEMALE: c[0], MALE: c[1]}[observation.gender]
 
+def propagate_probabilities(mode, observation, mother_genotypes, father_genotypes):
+    a = parent_probabilities_n_children(mode, observation.siblings, mother_genotypes, father_genotypes)
+    b = parent_to_children_probabilities(a)
+    observation_probabilities = constrain_probabilities(mode, observation, b)
+    if observation.gender == FEMALE:
+        mother_genotypes = observation_probabilities
+    else:
+        father_genotypes = observation_probabilities
+
+    return mother_genotypes, father_genotypes
+
+
+def parent_probabilities(mode, observation):
+    """Calculate the parent genotype probabilities for the given observation
+    """
+
+    mother, father = observation.mother, observation.father
+    if mother is None and father is None:
+        mother, father = observation.mother_father
+        mother_genotypes = genotype_possibilities(mode, FEMALE, observation=mother)
+        father_genotypes = genotype_possibilities(mode, MALE, observation=father)
+        return split_parent_probabilities(
+            parent_probabilities_n_children(mode, observation.children, mother_genotypes, father_genotypes)
+        )
+    if mother:
+        return propagate_probabilities(mode, observation, *parent_probabilities(mode, mother))
+    if father:
+        return propagate_probabilities(mode, observation, *parent_probabilities(mode, father))
+
+
+def observation_probabilities(mode, observation):
+    probabilities = parent_probabilities(mode, observation)
+
+    # Parent probabilities function only applies parent_probabilities_n_children func
+    # to the supplied observation parents. This means we need to update the probabilities
+    # for an observation with children
+    if observation.children:
+        probabilities = split_parent_probabilities(
+            parent_probabilities_n_children(mode, observation.children, *probabilities)
+        )
+
+    return {FEMALE: probabilities[0], MALE: probabilities[1]}[observation.gender]
