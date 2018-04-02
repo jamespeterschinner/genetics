@@ -121,33 +121,57 @@ def genotype_possibilities(mode, gender, affected=None, observation=None):
 
 def normalize_probabilities(probabilities):
     """Normalize a set of probabilities.
+
     This is equivalent to applying bayes rule to all probabilities
-    with a null prior."""
+    with a null prior.
+
+    Args:
+        probabilities: dict of probabilities to normalize
+
+    Returns: dict of probabilities
+    """
     prior = Fraction(1, len(probabilities))
     normalize = sum([i * prior for i in probabilities.values()])
     return {key: (value * prior) / normalize for key, value in probabilities.items()
             if value != 0}
 
 
-def constrain_probabilities(mode, observation, probabilities):
-    """Given a punnet square remove all genotypes that
-    don't match the observation given a mode of inheritance
+def constrain_probabilities(mode, observation, genotype_probabilities):
+    """Given a dict of genotype probabilities remove all genotypes that
+    don't match the observation given a mode of inheritance.
+
+    Args:
+        mode: The mode of inheritance
+        observation: Observation to match
+        genotype_probabilities: dict of genotype probabilities
+
+    Returns: dict of probabilities
     """
-    constrained = {genotype: probability for genotype, probability in probabilities.items()
+    constrained = {genotype: probability for genotype, probability in genotype_probabilities.items()
                    if observation in phenotype_given_genotype(genotype, mode)}
     if constrained:
         constrained = normalize_probabilities(constrained)
     return constrained
 
 
-def punnet_occurrences(mode, observation, probabilities):
-    """Calculate the times the observation would have been made given a punnet square
+def punnet_occurrences(mode, observation, genotype_probabilities):
+    """Calculate the times the observation would have been made given a dict of
+    genotype probabilities.
+
+    genotype_probabilities will generally be the result of a punnet square.
+
+    Args:
+        mode: The mode of inheritance
+        observation: The observation to match
+        genotype_probabilities: A dict of genotype probabilities
+
+    Returns: Fraction indicating probability
     """
-    return sum(probability for genotype, probability in probabilities.items()
+    return sum(probability for genotype, probability in genotype_probabilities.items()
                if observation in phenotype_given_genotype(genotype, mode))
 
 
-def next_parent_probabilities(mode, child, genotype_probabilities):
+def _next_parent_probabilities(mode, child, genotype_probabilities):
     """Create the next mother and father genotypes for the parent probabilities
     function"""
     mother, father = child.mother_father
@@ -184,12 +208,23 @@ def parent_likelihood_n_children(mode, children, mother_genotypes, father_genoty
         result.append(punnet_occurrences(mode, child, genotypes_probabilities))
         result.append(
             parent_likelihood_n_children(mode, child.children,
-                                         *next_parent_probabilities(mode, child, genotypes_probabilities))
+                                         *_next_parent_probabilities(mode, child, genotypes_probabilities))
         )
     return reduce(mul, result)
 
 
 def parent_probabilities_n_children(mode, children, mother_genotypes, father_genotypes):
+    """Calculate the probabilities for each possible parent combination from the supplied
+    mother and father genotype probabilities
+
+    Args
+        mode: The mode of inheritance
+        children: An iterable of children observations
+        mother_genotype: dict of mother genotype probabilities
+        father_genotype: dict of father genotype probabilities
+
+    Returns: dict of parent combination probabilities keys in the form of (mother, father) genotype
+    """
     return normalize_probabilities({
         (m_genotype, f_genotype):
             parent_likelihood_n_children(mode, children, m_genotype, f_genotype) * (f_prob * m_prob)
@@ -200,7 +235,12 @@ def parent_probabilities_n_children(mode, children, mother_genotypes, father_gen
 
 def parent_to_children_probabilities(parent_probabilities):
     """Convert the probabilities of parent combinations to there resulting
-    children probabilities
+    children probabilities.
+
+    Args:
+        parent_probabilities: dict of probabilities with keys in the form of (mother, father) genotype
+
+    Returns: dict of genotype probabilities
     """
     child_probabilities = defaultdict(lambda: 0)
     for (f_genotype, m_genotype), parent_probability in parent_probabilities.items():
@@ -220,12 +260,35 @@ def split_parent_probabilities(probabilities):
 
 
 def back_propagate(mode, observation, mother_genotypes, father_genotypes):
+    """Propagate the information of the downstream observations to the current observation. Eg.
+
+    What is the current observation genotype probabilities given how well the observations parent
+    probabilities match the parents children.
+
+    Args:
+        mode: Mode of inheritance
+        observation: The observation in question
+        mother_genotypes: A dict of genotype probabilities for the observations mother
+        father_genotypes: A dict of genotype probabilities for the observations father
+
+    Returns: A dict of genotype probabilities for the observation
+    """
     a = parent_probabilities_n_children(mode, observation.siblings, mother_genotypes, father_genotypes)
     b = parent_to_children_probabilities(a)
     return constrain_probabilities(mode, observation, b)
 
 
 def parent_probabilities(mode, mother, father):
+    """Calculate the best fit genotype probabilities for the supplied mother and father
+    observation
+
+    Args:
+        mode: The mode of inheritance
+        mother: The observed mother
+        father: The observed father
+
+    Returns: tuple of (mother_genotypes, father_genotypes)
+    """
     mm = mf = fm = ff = None
 
     if mother:
@@ -251,6 +314,14 @@ def parent_probabilities(mode, mother, father):
 
 
 def observation_probabilities(mode, observation):
+    """Calculate the genotype probabilities for the observation
+
+    Args:
+        mode: Mode of inheritance
+        observation: The observation in question
+
+    Returns: dict of genotype probabilities
+    """
     a = parent_probabilities(mode, *observation.mother_father)
     b = parent_probabilities_n_children(mode, observation.children, *a)
     probabilities = split_parent_probabilities(b)
