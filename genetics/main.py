@@ -1,6 +1,7 @@
-from constants import *
+
 from pedigree import Pedigree
-from analysis import *
+from core import *
+from genotype_analysis import *
 from observation import Observation
 from pprint import pprint as pp
 

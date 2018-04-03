@@ -1,8 +1,10 @@
 from collections import namedtuple
 
-from constants import *
+from core import VALID_OBSERVATIONS, VALID_INSTRUCTIONS
 from helpers import reverse
 from observation import Observation
+
+__all__ = ['parse_text']
 
 ParsedText = namedtuple('ParsedText', ['array', 'shape'])
 
@@ -136,7 +138,7 @@ def _add_generation_index(indexed_observations, generation_rows, generation_colu
         observation.generation = (generation_rows[row], generation_columns[column])
 
 
-def parse(text):
+def parse_text(text):
     array, shape = _create_text_array(text)
 
     # Used to indicate that subsequent operations on each observation

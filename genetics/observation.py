@@ -1,6 +1,9 @@
+from core import MALE, FEMALE, MALES, FEMALES
+from core import VALID_OBSERVATIONS
 from exceptions import InvalidObservation
-from constants import *
-from analysis import *
+
+__all__ = ['Observation']
+
 
 class Observation(str):
 
@@ -99,8 +102,6 @@ class Observation(str):
         for child in self._children:
             child._mother, child._father = mother, father
 
-
-
     def __new__(cls, value):
         if value not in VALID_OBSERVATIONS:
             raise InvalidObservation
@@ -113,5 +114,3 @@ class Observation(str):
         self._partner = None
         self._children = ()
         self._index = None
-
-

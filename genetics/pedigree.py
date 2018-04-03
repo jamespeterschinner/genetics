@@ -1,8 +1,9 @@
-
+from genetics.parser import parse_text
 from helpers import horizontal_index
 from helpers import reverse
 from helpers import vertical_index
-from genetics.parser import parse
+
+__all__ = ['Pedigree']
 
 
 class Pedigree(object):
@@ -25,16 +26,14 @@ class Pedigree(object):
         column_map = reverse(self._columns)
         return [(row_map[row], column_map[column]) for row, column in self._affected]
 
-
     def __init__(self, text):
-        parsed_input = parse(text)
+        parsed_input = parse_text(text)
         self._array = parsed_input.array
         self._shape = parsed_input.shape
         self._indexed_observations = parsed_input.indexed_observations
         self._affected = parsed_input.affected_observations
         self._rows = parsed_input.generation_mapping.row
         self._columns = parsed_input.generation_mapping.column
-
 
     def __getitem__(self, index):
         row, column = index
@@ -47,7 +46,6 @@ class Pedigree(object):
     def __repr__(self):
         """Create a nice console display
         """
-
 
         # Top index
         column_index = horizontal_index(self.shape[1], self._columns,

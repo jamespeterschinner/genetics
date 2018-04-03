@@ -2,6 +2,6 @@ F-m
 |
 f-m
 |
-M-f f-m F-m
-|   |   |
-f-m M   f f m
+M-f   f-m F-m
+  |   |   |
+  f-m M   f f m
