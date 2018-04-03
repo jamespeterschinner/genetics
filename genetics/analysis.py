@@ -5,7 +5,7 @@ from itertools import product
 from operator import mul
 
 from constants import *
-from exceptions import InvalidState
+from exceptions import InvalidState, NonMendelianPattern
 from punnet_square import punnet_square
 
 
@@ -260,10 +260,10 @@ def split_parent_probabilities(probabilities):
 
 
 def back_propagate(mode, observation, mother_genotypes, father_genotypes):
-    """Propagate the information of the downstream observations to the current observation. Eg.
+    """Back propagate the information of the downstream observations to the current observation. Eg.
 
     What is the current observation genotype probabilities given how well the observations parent
-    probabilities match the parents children.
+    probabilities match the parents children?
 
     Args:
         mode: Mode of inheritance
@@ -322,7 +322,12 @@ def observation_probabilities(mode, observation):
 
     Returns: dict of genotype probabilities
     """
-    a = parent_probabilities(mode, *observation.mother_father)
-    b = parent_probabilities_n_children(mode, observation.children, *a)
-    probabilities = split_parent_probabilities(b)
-    return {FEMALE: probabilities[0], MALE: probabilities[1]}[observation.gender]
+    try:
+        a = parent_probabilities(mode, *observation.mother_father)
+        b = parent_probabilities_n_children(mode, observation.children, *a)
+        probabilities = split_parent_probabilities(b)
+    except ZeroDivisionError:
+        raise NonMendelianPattern(f'The observations phenotype `{observation}` is not valid given a {mode} '
+                                  f'mode of inheritance.')
+    else:
+        return {FEMALE: probabilities[0], MALE: probabilities[1]}[observation.gender]

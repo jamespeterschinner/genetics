@@ -1,8 +1,20 @@
-class InvalidObservation(Exception):
+class MendelianInferenceException(Exception):
     pass
 
-class InvalidChild(Exception):
+class ParserException(MendelianInferenceException):
     pass
 
-class InvalidState(Exception):
+class InvalidObservation(ParserException):
+    pass
+
+class InvalidChild(ParserException):
+    pass
+
+class AnalysisException(MendelianInferenceException):
+    pass
+
+class InvalidState(AnalysisException):
+    pass
+
+class NonMendelianPattern(AnalysisException):
     pass

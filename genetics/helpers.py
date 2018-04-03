@@ -18,7 +18,10 @@ def horizontal_index(n, mapping, offset=0):
     """
     mapping = reverse(mapping)
     index = [' ' * offset for _ in range(len(str(n)))]
-    for number in map(str, (mapping[i] if i in mapping else ' ' for i in range(n))):
+    pad_width = 1
+    for number in map(lambda x: str(x).ljust(pad_width, ' '),
+                      (mapping[i] if i in mapping else '' for i in range(n))):
+        pad_width = max((len(number), pad_width))
         for idx, n in enumerate(number):
             index[idx] += n + '|'
     pad = max(map(len, index))
