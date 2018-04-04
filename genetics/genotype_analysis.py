@@ -44,6 +44,8 @@ def parent_likelihood(mode, children, mother_genotypes, father_genotypes):
         father_genotypes: the probabilities of father genotypes
 
     """
+
+
     genotypes_probabilities = punnet_square(mother_genotypes, father_genotypes)
     result = [1]
     for child in children:

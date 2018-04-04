@@ -8,6 +8,7 @@ __all__ = ['Pedigree']
 
 class Pedigree(object):
 
+
     @property
     def rows(self):
         return len(self._rows)
@@ -24,7 +25,12 @@ class Pedigree(object):
     def affected(self):
         row_map = reverse(self._rows)
         column_map = reverse(self._columns)
-        return [(row_map[row], column_map[column]) for row, column in self._affected]
+        return tuple((row_map[row], column_map[column]) for row, column in self._affected)
+
+    @property
+    def roots(self):
+        return tuple(observation for observation in self._indexed_observations.values()
+                     if observation.root)
 
     def __init__(self, text):
         parsed_input = parse_text(text)

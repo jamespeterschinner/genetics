@@ -26,21 +26,20 @@ The project aims to generate answers to statistical questions. Current functiona
 is limited. See below for example.
   
 ```
->>> p = Pedigree.from_file(r'C:\Users\James\PycharmProjects\genetics\family_tree.txt')
->>> p
-                            
-  0| |1| |2| |3| |4| |5| |6| |7|
-0|m - f                        
- |    |                        
-1|    m   f - m   m       f - m
- |        |               |    
-2|        m   m   m   f   M    
-
->>> observation_probabilities(X_LINKED_RECESSIVE, p[2,5])
-{'xX': Fraction(1, 18), 'XX': Fraction(17, 18)}
->>> observation_probabilities(X_LINKED_RECESSIVE, p[1,6])
-{'xX': Fraction(1, 1)}
->>> observation_probabilities(X_LINKED_RECESSIVE, p[1,2])
-{'xX': Fraction(1, 9), 'XX': Fraction(8, 9)}
+>>> p2 = Pedigree.from_file(r'C:\Users\James\PycharmProjects\genetics\pedigree_2.txt')
+>>> p2
+                                  
+  0| |1| |2| |3| |4| | | | |5| |6|
+0|f - m                          
+ ||                              
+1|m   f - m   m             f - m
+ |    |                     |    
+2|    m   m   m   f         M    
+>>> genotypes_n_mode(X_LINKED_RECESSIVE, p2[0,0])
+{'Xx': Fraction(288, 823), 'xX': Fraction(535, 823)}
+>>> genotypes_n_mode(X_LINKED_RECESSIVE, p2[1,1])
+{'XX': Fraction(8, 9), 'xX': Fraction(1, 9)}
+>>> genotypes_n_mode(X_LINKED_RECESSIVE, p2[2,4])
+{'XX': Fraction(17, 18), 'xX': Fraction(1, 18)}
  ```
   

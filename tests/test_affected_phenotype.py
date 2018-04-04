@@ -1,5 +1,4 @@
-from analysis import affected_genotype
-from constants import *
+from core import *
 
 def test_aa_AUTOSOMAL_DOMINANT():
     assert not affected_genotype('aa', AUTOSOMAL_DOMINANT)
@@ -94,13 +93,13 @@ def test_XX_Y_LINKED():
     assert not affected_genotype('XX', Y_LINKED)
 
 def test_xy_Y_LINKED():
-    assert affected_genotype('xy', Y_LINKED)
+    assert not affected_genotype('xy', Y_LINKED)
 
 def test_xY_Y_LINKED():
     assert affected_genotype('xY', Y_LINKED)
 
 def test_Xy_Y_LINKED():
-    assert affected_genotype('Xy', Y_LINKED)
+    assert not affected_genotype('Xy', Y_LINKED)
 
 def test_XY_Y_LINKED():
     assert affected_genotype('XY', Y_LINKED)

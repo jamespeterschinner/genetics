@@ -2,9 +2,9 @@ from collections import Counter, defaultdict
 from fractions import Fraction
 from itertools import product, chain
 
-from exceptions import InvalidState
+from exceptions import NonMendelianPattern
 
-__all__ = ['ALL_MODES', 'AUTOSOMAL_CHROMOSOMES', 'AUTOSOMAL_DOMINANT', 'AUTOSOMAL_MODES', 'AUTOSOMAL_RECESSIVE',
+__all__ = ['affected_genotype','ALL_MODES', 'AUTOSOMAL_CHROMOSOMES', 'AUTOSOMAL_DOMINANT', 'AUTOSOMAL_MODES', 'AUTOSOMAL_RECESSIVE',
            'constrain_probabilities', 'count', 'FEMALE', 'FEMALE_SEX_LINKED_CHROMOSOMES', 'FEMALES',
            'genotype_possibilities', 'MALE', 'MALE_SEX_LINKED_CHROMOSOMES', 'MALES', 'normalize_probabilities',
            'phenotypes', 'punnet_occurrences', 'punnet_square', 'SEX_LINKED_MODES', 'VALID_INSTRUCTIONS',
@@ -101,7 +101,7 @@ def affected_genotype(mode, genotype):
         if 'xx' in genotype:
             return True
 
-    elif mode == Y_LINKED and 'y' in genotype.lower():
+    elif mode == Y_LINKED and 'Y' in genotype:
         return True
     return False
 
@@ -161,11 +161,11 @@ def genotype_possibilities(mode, gender, affected=None, observation=None):
     Returns: list of valid genotypes
     """
 
-    if mode == Y_LINKED and gender == FEMALE and affected:
-        raise InvalidState('Can not have an affected female if condition is Y_LINKED')
-
     if observation is not None:
         affected = observation.affected
+
+    if mode == Y_LINKED and gender == FEMALE and affected:
+        raise NonMendelianPattern('A female can not be affected if the mode is Y_LINKED')
 
     if mode in AUTOSOMAL_MODES:
         chromosomes = AUTOSOMAL_CHROMOSOMES
